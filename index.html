@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazing Animals Year 4 Module 8 App</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- MediaPipe Pose & Camera Utils -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800&display=swap');
+    body { font-family: 'Fredoka', sans-serif; background-color: #0f172a; }
+
+    .bg-emerald-custom { background-color: #15803d; }
+    .bg-yellow-custom { background-color: #facc15; }
+    .text-yellow-custom { color: #facc15; }
+
+    .tab-active {
+      background-color: #facc15 !important;
+      color: #166534 !important;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Fullscreen High-Visibility Visual Feedback Overlays */
+    #feedback-overlay {
+      pointer-events: none;
+      transition: opacity 0.2s ease-in-out;
+    }
+
+    .anim-bounce-pop {
+      animation: bouncePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes bouncePop {
+      0% { transform: scale(0.3); opacity: 0; }
+      60% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .anim-shake {
+      animation: shakeAnim 0.4s ease-in-out forwards;
+    }
+    @keyframes shakeAnim {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-20px); }
+      40% { transform: translateX(20px); }
+      60% { transform: translateX(-15px); }
+      80% { transform: translateX(15px); }
+    }
+
+    /* Section 3 Dark Forest Theme */
+    .sec3-container {
+      background: #1A3636;
+      border: 4px solid #40534C;
+      color: #F1F8F5;
+    }
+    .sec3-card {
+      background: #40534C;
+      border: 2px solid #677D6A;
+    }
+    .sec3-prompt-box {
+      background: #122828;
+      border: 3px dashed #70E000;
+    }
+
+    /* 5-Bar Soundwave Equalizer */
+    .soundwave {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      height: 36px;
+    }
+    .soundwave.active { display: flex; }
+    .soundwave .bar {
+      width: 8px;
+      height: 12px;
+      background: #facc15;
+      border-radius: 4px;
+      animation: wave 0.8s infinite ease-in-out;
+    }
+    .soundwave .bar:nth-child(1) { animation-delay: 0.0s; }
+    .soundwave .bar:nth-child(2) { animation-delay: 0.2s; }
+    .soundwave .bar:nth-child(3) { animation-delay: 0.4s; }
+    .soundwave .bar:nth-child(4) { animation-delay: 0.1s; }
+    .soundwave .bar:nth-child(5) { animation-delay: 0.3s; }
+
+    @keyframes wave {
+      0%, 100% { height: 10px; }
+      50% { height: 34px; background: #ef4444; }
+    }
+
+    .btn-mic {
+      background: linear-gradient(135deg, #FF6B6B, #facc15);
+      color: #1A3636;
+      transition: all 0.3s ease;
+    }
+    .btn-mic.listening {
+      background: #ef4444 !important;
+      color: #ffffff !important;
+      animation: micPulse 1.2s infinite;
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.8);
+    }
+    @keyframes micPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+
+    .transcript-box-enlarged {
+      background: #D6BD98;
+      color: #1A3636;
+      min-height: 110px;
+      padding: 20px;
+      border-radius: 18px;
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.4;
+      border: 3px solid #677D6A;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 min-h-screen text-slate-100 pb-12 relative overflow-x-hidden">
+
+  <!-- FULLSCREEN HIGH-VISIBILITY FEEDBACK OVERLAY -->
+  <div id="feedback-overlay" class="fixed inset-0 z-50 opacity-0 flex items-center justify-center p-6 bg-transparent">
+    <div id="feedback-content" class="text-center p-10 rounded-3xl shadow-2xl max-w-xl w-full">
+      <div id="feedback-icon" class="text-8xl md:text-9xl mb-4"></div>
+      <div id="feedback-text" class="text-4xl md:text-6xl font-black text-white tracking-wider uppercase drop-shadow-lg"></div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="bg-emerald-custom text-white p-4 shadow-xl border-b-4 border-emerald-800">
+    <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <div class="flex items-center space-x-3">
+        <div class="w-14 h-14 bg-yellow-custom rounded-full flex items-center justify-center text-3xl shadow-md border-2 border-amber-500">
+          🦁
+        </div>
+        <div>
+          <h1 class="text-3xl font-black tracking-wide text-yellow-custom drop-shadow">Amazing Animals!</h1>
+          <p class="text-xs font-bold text-emerald-100">Year 4 Module 8 • Comparative Adjectives ESL Classroom Edition</p>
+        </div>
+      </div>
+
+      <!-- Sound Mute Toggle -->
+      <button id="mute-btn" onclick="toggleMute()" class="px-5 py-2.5 bg-yellow-custom hover:bg-yellow-400 text-emerald-950 font-extrabold rounded-full text-sm shadow-md flex items-center space-x-2 transition border-2 border-yellow-300">
+        <i id="mute-icon" class="fa-solid fa-volume-high text-emerald-900"></i>
+        <span id="mute-text">Sound ON</span>
+      </button>
+    </div>
+
+    <!-- TAB NAVIGATION -->
+    <div class="max-w-4xl mx-auto mt-4 bg-emerald-950/70 p-1.5 rounded-full flex justify-between gap-1 shadow-inner border border-emerald-700">
+      <button id="nav-pose" onclick="switchTab('tab-pose')" class="flex-1 py-3 px-3 rounded-full text-sm md:text-base font-black text-white hover:text-yellow-200 transition flex items-center justify-center space-x-2 tab-active">
+        <span>🏃 1. Animal Pose Challenge</span>
+      </button>
+      <button id="nav-comparative" onclick="switchTab('tab-comparative')" class="flex-1 py-3 px-3 rounded-full text-sm md:text-base font-black text-white hover:text-yellow-200 transition flex items-center justify-center space-x-2">
+        <span>🔀 2. Compare 2 Animals</span>
+      </button>
+      <button id="nav-speaking" onclick="switchTab('tab-speaking')" class="flex-1 py-3 px-3 rounded-full text-sm md:text-base font-black text-white hover:text-yellow-200 transition flex items-center justify-center space-x-2">
+        <span>🎙️ 3. Speaking Game</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- SECTION 1: ANIMAL POSE CHALLENGE -->
+    <section id="tab-pose" class="space-y-4">
+      <div class="bg-slate-800 rounded-3xl p-6 shadow-xl border-4 border-emerald-600 relative overflow-hidden">
+        
+        <div class="flex justify-between items-center mb-4">
+          <div class="bg-emerald-700 text-white px-5 py-2 rounded-full text-base font-black shadow">
+            Score: <span id="pose-score">0</span> / 8
+          </div>
+          <h2 class="text-2xl font-black text-yellow-400 tracking-wide text-center">🐾 Animal Pose Challenge! 🐾</h2>
+          <button onclick="skipAnimal()" class="bg-amber-400 hover:bg-amber-300 text-amber-950 text-xs md:text-sm font-black px-4 py-2 rounded-full border border-amber-500 transition flex items-center space-x-1 shadow">
+            <span>Skip</span>
+            <i class="fa-solid fa-forward"></i>
+          </button>
+        </div>
+
+        <div class="bg-slate-900 rounded-2xl p-4 text-center border-2 border-dashed border-emerald-400 mb-4 space-y-1">
+          <div id="target-title" class="text-2xl md:text-3xl font-black text-yellow-300">Press Start Camera to Begin!</div>
+          <div id="target-desc" class="text-sm md:text-base font-bold text-emerald-300">Allow camera access when prompted by your browser.</div>
+        </div>
+
+        <div class="relative bg-black rounded-2xl overflow-hidden aspect-video shadow-2xl flex items-center justify-center border-2 border-slate-700">
+          <video id="webcam" class="absolute inset-0 w-full h-full object-cover transform -scale-x-100" playsinline></video>
+          <canvas id="outputCanvas" class="absolute inset-0 w-full h-full transform -scale-x-100"></canvas>
+          
+          <div id="countdown-overlay" class="hidden absolute inset-0 bg-black/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-white">
+            <div id="countdown-number" class="text-9xl font-black text-yellow-400 animate-bounce">3</div>
+            <div class="text-xl font-black mt-2">Get Ready into Pose!</div>
+          </div>
+
+          <button id="startBtn" onclick="initGame()" class="z-10 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-8 py-4 rounded-full text-xl shadow-2xl border-b-4 border-amber-700 transform active:scale-95 transition flex items-center space-x-3">
+            <i class="fa-solid fa-video"></i>
+            <span>Start Camera 📷</span>
+          </button>
+        </div>
+
+        <div class="w-full bg-slate-900 h-6 rounded-full mt-4 overflow-hidden border border-slate-700">
+          <div id="holdProgress" class="h-full bg-emerald-500 w-0 transition-all duration-75"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: DUAL ANIMAL COMPARATIVE GENERATOR -->
+    <section id="tab-comparative" class="hidden space-y-6">
+      <div class="bg-slate-800 rounded-3xl p-6 shadow-xl border-4 border-emerald-600 space-y-6">
+        <div class="text-center space-y-1">
+          <h2 class="text-3xl font-black text-yellow-400">🔀 Dual Animal Comparative Matrix</h2>
+          <p class="text-sm font-bold text-slate-300">Select any two animals to auto-generate correct comparative sentences!</p>
+        </div>
+
+        <div class="bg-slate-900 rounded-2xl p-5 border-2 border-emerald-500">
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+            
+            <div class="md:col-span-2 space-y-1 text-center">
+              <label class="block text-xs font-black text-yellow-400 uppercase tracking-wider">First Animal</label>
+              <select id="comp-select-a" onchange="updateComparative()" class="w-full bg-slate-800 border-2 border-emerald-400 rounded-xl p-3 text-lg font-black text-white focus:ring-2 focus:ring-emerald-400">
+              </select>
+            </div>
+
+            <div class="text-center font-black text-amber-400 text-3xl">VS</div>
+
+            <div class="md:col-span-2 space-y-1 text-center">
+              <label class="block text-xs font-black text-yellow-400 uppercase tracking-wider">Second Animal</label>
+              <select id="comp-select-b" onchange="updateComparative()" class="w-full bg-slate-800 border-2 border-emerald-400 rounded-xl p-3 text-lg font-black text-white focus:ring-2 focus:ring-emerald-400">
+              </select>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="bg-slate-900 rounded-2xl p-6 border-2 border-sky-400 text-center space-y-2 shadow-md">
+            <div id="card-a-emoji" class="text-7xl">🐆</div>
+            <div id="card-a-name" class="text-3xl font-black text-sky-300">Cheetah</div>
+            <span id="card-a-badge" class="inline-block px-4 py-1 bg-sky-950 text-sky-300 rounded-full text-xs font-black uppercase border border-sky-500">FAST</span>
+          </div>
+
+          <div class="bg-slate-900 rounded-2xl p-6 border-2 border-amber-400 text-center space-y-2 shadow-md">
+            <div id="card-b-emoji" class="text-7xl">🦒</div>
+            <div id="card-b-name" class="text-3xl font-black text-amber-300">Giraffe</div>
+            <span id="card-b-badge" class="inline-block px-4 py-1 bg-amber-950 text-amber-300 rounded-full text-xs font-black uppercase border border-amber-500">TALL</span>
+          </div>
+        </div>
+
+        <div class="bg-emerald-900/90 rounded-2xl p-6 text-center text-white relative shadow-2xl space-y-4 border-2 border-emerald-500">
+          <div class="text-xs font-black text-yellow-300 uppercase tracking-widest">Generated Comparative Sentence</div>
+          <div id="comp-result-sentence" class="text-2xl md:text-3xl font-black text-yellow-100 drop-shadow">
+            "A cheetah is faster than a tortoise."
+          </div>
+          <button onclick="speakCompSentence()" class="px-6 py-3 bg-yellow-custom hover:bg-yellow-400 text-emerald-950 font-black rounded-full text-base inline-flex items-center space-x-2 shadow-lg border border-yellow-200">
+            <i class="fa-solid fa-volume-high"></i>
+            <span>Listen Audio</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 3: DARK FOREST SPEAKING ASSESSMENT GAME -->
+    <section id="tab-speaking" class="hidden space-y-6">
+      <div class="sec3-container rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-emerald-700 pb-4 gap-2">
+          <div>
+            <span id="speaking-q-num" class="text-xs font-black bg-emerald-900 text-yellow-300 px-4 py-1.5 rounded-full uppercase border border-emerald-600">Question 1 of 12</span>
+            <h2 class="text-3xl font-black text-yellow-300 mt-2">🎙️ Dark Forest Voice Challenge</h2>
+          </div>
+          <div class="bg-emerald-900 text-white px-5 py-2 rounded-full text-base font-black shadow border border-emerald-600">
+            Score: <span id="speaking-score">0</span> / 12
+          </div>
+        </div>
+
+        <!-- CLEAR CLASSROOM INSTRUCTION BANNER -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm font-bold bg-slate-900/70 p-4 rounded-2xl border border-emerald-600">
+          <div class="flex items-center space-x-3 text-yellow-300 bg-emerald-950/60 p-3 rounded-xl border border-emerald-800">
+            <span class="text-2xl">🎤</span>
+            <div>
+              <div class="font-black text-xs uppercase text-emerald-400">Speaker Role</div>
+              <div>Click mic & speak your sentence out loud!</div>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3 text-emerald-200 bg-emerald-950/60 p-3 rounded-xl border border-emerald-800">
+            <span class="text-2xl">✏️</span>
+            <div>
+              <div class="font-black text-xs uppercase text-emerald-400">Classmates Role</div>
+              <div>Write down your answer on your worksheet now!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prompt Box -->
+        <div class="sec3-prompt-box rounded-2xl p-6 text-center space-y-3 shadow-inner">
+          <div class="text-lg text-emerald-200">
+            Animals: <span id="spk-prompt-pair" class="text-yellow-300 text-2xl font-black ml-1">Cheetah & Cat</span>
+          </div>
+          <div class="text-lg text-emerald-200">
+            Adjective: <span id="spk-prompt-adj" class="text-yellow-300 text-2xl font-black ml-1">fast</span>
+          </div>
+
+          <!-- Missing Word Scaffold Hint Box (No Extra Sound Button Inside) -->
+          <div id="scaffold-box" class="hidden bg-amber-900/90 border-2 border-amber-400 rounded-xl p-4 text-amber-100 space-y-1 modal-pop mt-3 shadow-lg">
+            <div class="text-xs font-black uppercase text-yellow-300 tracking-wider">💡 Missing Word Scaffold Hint</div>
+            <div id="scaffold-sentence" class="text-xl font-black text-yellow-200">"A cheetah is _______ than a cat."</div>
+          </div>
+        </div>
+
+        <!-- Microphone Controls & Soundwave Equalizer -->
+        <div class="text-center space-y-4">
+          <button id="mic-btn" onclick="toggleSpeechRecognition()" class="btn-mic text-xl font-black px-10 py-5 rounded-full shadow-2xl inline-flex items-center space-x-3 cursor-pointer transform active:scale-95 border-2 border-amber-300">
+            <i class="fa-solid fa-microphone text-2xl"></i>
+            <span id="mic-btn-text">🎤 Press & Speak</span>
+          </button>
+
+          <!-- 5-Bar Animated Soundwave Equalizer -->
+          <div id="soundwave" class="soundwave">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+          </div>
+
+          <div id="mic-status" class="text-base font-black text-yellow-300 min-h-[28px]">Click mic to start speaking...</div>
+          
+          <div class="text-xs font-bold text-slate-300">
+            Attempts: <span id="attempt-count">0</span> / 2 (Scaffold hint unlocks after 2 attempts)
+          </div>
+
+          <!-- ENLARGED SPEECH TRANSCRIPT DISPLAY BOX -->
+          <div class="text-left space-y-2">
+            <div class="text-xs font-black uppercase tracking-wider text-emerald-300">Your Speech Transcript:</div>
+            <div id="transcript-box" class="transcript-box-enlarged flex items-center justify-start shadow-inner">
+              "Waiting for microphone input..."
+            </div>
+          </div>
+        </div>
+
+        <!-- Questions Navigation -->
+        <div class="flex justify-between items-center pt-4 border-t border-emerald-800">
+          <button onclick="prevQuestion()" class="px-6 py-2.5 bg-slate-700 text-slate-200 rounded-full text-xs font-black hover:bg-slate-600 transition">Previous</button>
+          <button id="nextBtn" onclick="nextQuestion()" class="px-8 py-3 bg-lime-500 text-slate-950 font-black rounded-full text-base hover:bg-lime-400 shadow-xl transition">Next Question ➡️</button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL FOR POSE UNLOCK -->
+  <div id="infoModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-3xl p-6 text-center border-4 border-yellow-400 max-w-sm w-full space-y-4 shadow-2xl text-white">
+      <div id="modalEmoji" class="text-7xl">🐆</div>
+      <h3 id="modalTitle" class="text-2xl font-black text-yellow-400">Cheetah Unlocked!</h3>
+      <div id="modalTrait" class="inline-block bg-yellow-400 text-slate-950 font-black px-4 py-1 rounded-full text-xs">Trait: FAST</div>
+      <div id="modalSentence" class="text-lg font-black text-sky-200 bg-slate-900 p-4 rounded-xl border border-sky-400">
+        "A cheetah is faster than a tortoise."
+      </div>
+      <button id="modalNextBtn" onclick="nextAnimal()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-full text-base shadow-lg">
+        Next Animal Challenge ➔
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // DATASETS
+    const POSE_ANIMALS = [
+      { id: 'cheetah', name: 'Cheetah', emoji: '🐆', trait: 'fast', comparative: 'faster', sentence: 'A cheetah is faster than a tortoise.', actionTitle: '1. 🐆 Cheetah (Fast)', actionDesc: '🏃 Runner Stance: Pump both arms like sprinting!' },
+      { id: 'giraffe', name: 'Giraffe', emoji: '🦒', trait: 'tall', comparative: 'taller', sentence: 'A giraffe is taller than an elephant.', actionTitle: '2. 🦒 Giraffe (Tall)', actionDesc: '🙋 Reach High: Stretch both arms straight up high!' },
+      { id: 'elephant', name: 'Elephant', emoji: '🐘', trait: 'big', comparative: 'bigger', sentence: 'An elephant is bigger than a gorilla.', actionTitle: '3. 🐘 Elephant (Big)', actionDesc: '🐘 Big Ears: Hold both hands wide beside your head!' },
+      { id: 'tortoise', name: 'Tortoise', emoji: '🐢', trait: 'slow', comparative: 'slower', sentence: 'A tortoise is slower than a cheetah.', actionTitle: '4. 🐢 Tortoise (Slow)', actionDesc: '🐢 Crouch Low: Fold your arms in front like a shell!' },
+      { id: 'whale', name: 'Whale', emoji: '🐳', trait: 'heavy', comparative: 'heavier', sentence: 'A whale is heavier than an elephant.', actionTitle: '5. 🐳 Whale (Heavy)', actionDesc: '🌊 Wide Splash: Stretch both arms out wide to the sides!' },
+      { id: 'gorilla', name: 'Gorilla', emoji: '🦍', trait: 'strong', comparative: 'stronger', sentence: 'A gorilla is stronger than a rabbit.', actionTitle: '6. 🦍 Gorilla (Strong)', actionDesc: '💪 Flex Biceps: Raise both arms up and flex muscles!' },
+      { id: 'rabbit', name: 'Rabbit', emoji: '🐇', trait: 'cute', comparative: 'cuter', sentence: 'A rabbit is cuter than a gorilla.', actionTitle: '7. 🐇 Rabbit (Cute)', actionDesc: '🐰 Bunny Paws: Hold hands up near chest like bunny paws!' },
+      { id: 'lion', name: 'Lion', emoji: '🦁', trait: 'strong', comparative: 'stronger', sentence: 'A lion is stronger than a tortoise.', actionTitle: '8. 🦁 Lion (Strong)', actionDesc: '🦁 Roar Claws: Hold both hands out in front as claws!' }
+    ];
+
+    const DUAL_ANIMALS = [
+      { id: 'cheetah', name: 'Cheetah', emoji: '🐆', trait: 'fast', comparative: 'faster' },
+      { id: 'giraffe', name: 'Giraffe', emoji: '🦒', trait: 'tall', comparative: 'taller' },
+      { id: 'elephant', name: 'Elephant', emoji: '🐘', trait: 'big', comparative: 'bigger' },
+      { id: 'tortoise', name: 'Tortoise', emoji: '🐢', trait: 'slow', comparative: 'slower' },
+      { id: 'whale', name: 'Whale', emoji: '🐳', trait: 'heavy', comparative: 'heavier' },
+      { id: 'gorilla', name: 'Gorilla', emoji: '🦍', trait: 'strong', comparative: 'stronger' },
+      { id: 'rabbit', name: 'Rabbit', emoji: '🐇', trait: 'cute', comparative: 'cuter' },
+      { id: 'lion', name: 'Lion', emoji: '🦁', trait: 'strong', comparative: 'stronger' }
+    ];
+
+    const SPEAKING_QUESTIONS = [
+      { animal1: 'cheetah', animal2: 'cat', adjective: 'fast', comparative: 'faster', scaffold: 'A cheetah is _______ than a cat.' },
+      { animal1: 'giraffe', animal2: 'elephant', adjective: 'tall', comparative: 'taller', scaffold: 'A giraffe is _______ than an elephant.' },
+      { animal1: 'elephant', animal2: 'lion', adjective: 'big', comparative: 'bigger', scaffold: 'An elephant is _______ than a lion.' },
+      { animal1: 'tortoise', animal2: 'rabbit', adjective: 'slow', comparative: 'slower', scaffold: 'A tortoise is _______ than a rabbit.' },
+      { animal1: 'gorilla', animal2: 'monkey', adjective: 'strong', comparative: 'stronger', scaffold: 'A gorilla is _______ than a monkey.' },
+      { animal1: 'snake', animal2: 'lizard', adjective: 'long', comparative: 'longer', scaffold: 'A snake is _______ than a lizard.' },
+      { animal1: 'shark', animal2: 'goldfish', adjective: 'scary', comparative: 'scarier', scaffold: 'A shark is _______ than a goldfish.' },
+      { animal1: 'panda', animal2: 'rhino', adjective: 'cute', comparative: 'cuter', scaffold: 'A panda is _______ than a rhino.' },
+      { animal1: 'hippo', animal2: 'frog', adjective: 'big', comparative: 'bigger', scaffold: 'A hippo is _______ than a frog.' },
+      { animal1: 'crocodile', animal2: 'turtle', adjective: 'dangerous', comparative: 'more dangerous', scaffold: 'A crocodile is _______ than a turtle.' },
+      { animal1: 'dolphin', animal2: 'jellyfish', adjective: 'smart', comparative: 'smarter', scaffold: 'A dolphin is _______ than a jellyfish.' },
+      { animal1: 'ostrich', animal2: 'chicken', adjective: 'fast', comparative: 'faster', scaffold: 'An ostrich is _______ than a chicken.' }
+    ];
+
+    let currentStep = 0;
+    let poseScore = 0;
+    let holdTimer = 0;
+    const requiredHoldTime = 50;
+    let isPoseUnlocked = false;
+    let isMuted = false;
+    let isCountingDown = false;
+    
+    let speakingScore = 0;
+    let currentQuestionIdx = 0;
+    let failedAttempts = 0;
+
+    let camera = null;
+    let pose = null;
+
+    const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('outputCanvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function speakText(text) {
+      if (isMuted) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      const icon = document.getElementById('mute-icon');
+      const text = document.getElementById('mute-text');
+      const btn = document.getElementById('mute-btn');
+      
+      if (isMuted) {
+        window.speechSynthesis.cancel();
+        icon.className = 'fa-solid fa-volume-xmark text-rose-600';
+        text.innerText = 'Sound OFF';
+        btn.classList.add('bg-rose-100', 'text-rose-900');
+      } else {
+        icon.className = 'fa-solid fa-volume-high text-emerald-900';
+        text.innerText = 'Sound ON';
+        btn.classList.remove('bg-rose-100', 'text-rose-900');
+      }
+    }
+
+    function switchTab(tabId) {
+      ['tab-pose', 'tab-comparative', 'tab-speaking'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+        document.getElementById('nav-' + id.replace('tab-', '')).classList.remove('tab-active');
+      });
+      document.getElementById(tabId).classList.remove('hidden');
+      document.getElementById('nav-' + tabId.replace('tab-', '')).classList.add('tab-active');
+    }
+
+    // HIGH VISIBILITY FULLSCREEN FEEDBACK OVERLAY SYSTEM
+    function triggerFeedbackOverlay(isCorrect, textMsg) {
+      const overlay = document.getElementById('feedback-overlay');
+      const content = document.getElementById('feedback-content');
+      const iconEl = document.getElementById('feedback-icon');
+      const textEl = document.getElementById('feedback-text');
+
+      content.classList.remove('anim-bounce-pop', 'anim-shake');
+
+      if (isCorrect) {
+        overlay.style.backgroundColor = 'rgba(34, 197, 94, 0.95)';
+        content.style.backgroundColor = '#15803d';
+        content.style.border = '6px solid #facc15';
+        iconEl.innerHTML = '✓';
+        iconEl.className = 'text-8xl md:text-9xl mb-2 text-yellow-300 font-black';
+        textEl.innerText = textMsg || 'CORRECT!';
+        content.classList.add('anim-bounce-pop');
+      } else {
+        overlay.style.backgroundColor = 'rgba(239, 68, 68, 0.95)';
+        content.style.backgroundColor = '#991b1b';
+        content.style.border = '6px solid #ffffff';
+        iconEl.innerHTML = '✕';
+        iconEl.className = 'text-8xl md:text-9xl mb-2 text-white font-black';
+        textEl.innerText = textMsg || 'TRY AGAIN!';
+        content.classList.add('anim-shake');
+      }
+
+      overlay.style.opacity = '1';
+
+      setTimeout(() => {
+        overlay.style.opacity = '0';
+      }, 1400);
+    }
+
+    // SYNTHESIZED AUDIO EFFECTS
+    function playMicStartSound() {
+      if (isMuted) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+      } catch (e) {}
+    }
+
+    function playWrongBeep() {
+      if (isMuted) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(180, audioCtx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+      } catch (e) {}
+    }
+
+    function playHintPopSound() {
+      if (isMuted) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch (e) {}
+    }
+
+    function playChimeSound() {
+      if (isMuted) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.frequency.setValueAtTime(freq, now + i * 0.08);
+          gain.gain.setValueAtTime(0.15, now + i * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.08 + 0.3);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.08);
+          osc.stop(now + i * 0.08 + 0.3);
+        });
+      } catch (e) {}
+    }
+
+    // SECTION 1 LOGIC
+    function startCountdown(callback) {
+      isCountingDown = true;
+      const overlay = document.getElementById('countdown-overlay');
+      const numberEl = document.getElementById('countdown-number');
+      overlay.classList.remove('hidden');
+      
+      let count = 3;
+      numberEl.innerText = count;
+
+      const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          numberEl.innerText = count;
+        } else if (count === 0) {
+          numberEl.innerText = 'GO!';
+        } else {
+          clearInterval(interval);
+          overlay.classList.add('hidden');
+          isCountingDown = false;
+          if (callback) callback();
+        }
+      }, 700);
+    }
+
+    function updateChallengeUI() {
+      if (currentStep < POSE_ANIMALS.length) {
+        document.getElementById('target-title').innerText = POSE_ANIMALS[currentStep].actionTitle;
+        document.getElementById('target-desc').innerText = POSE_ANIMALS[currentStep].actionDesc;
+      }
+    }
+
+    function initGame() {
+      document.getElementById('startBtn').classList.add('hidden');
+      updateChallengeUI();
+
+      try {
+        pose = new Pose({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+        });
+
+        pose.setOptions({
+          modelComplexity: 1,
+          smoothLandmarks: true,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+
+        pose.onResults(onResults);
+
+        camera = new Camera(videoElement, {
+          onFrame: async () => {
+            await pose.send({ image: videoElement });
+          },
+          width: 640,
+          height: 480
+        });
+
+        camera.start();
+      } catch(e) {
+        console.log("Webcam error, running mock detector");
+      }
+
+      startCountdown();
+    }
+
+    function onResults(results) {
+      canvasElement.width = videoElement.videoWidth || 640;
+      canvasElement.height = videoElement.videoHeight || 480;
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.poseLandmarks) {
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#70E000', lineWidth: 4 });
+        drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#facc15', lineWidth: 2, radius: 4 });
+
+        if (currentStep < POSE_ANIMALS.length && !isPoseUnlocked && !isCountingDown) {
+          const lm = results.poseLandmarks;
+          const lWrist = lm[15], rWrist = lm[16];
+          const lShoulder = lm[11], rShoulder = lm[12];
+          const nose = lm[0];
+
+          let targetPoseMet = false;
+          const currentTarget = POSE_ANIMALS[currentStep].id;
+
+          if (currentTarget === 'cheetah') {
+            if (Math.abs(lWrist.y - rWrist.y) > 0.15) targetPoseMet = true;
+          } else if (currentTarget === 'giraffe') {
+            if (lWrist.y < nose.y - 0.1 && rWrist.y < nose.y - 0.1) targetPoseMet = true;
+          } else if (currentTarget === 'elephant') {
+            if (lWrist.y < lShoulder.y && rWrist.y < rShoulder.y && Math.abs(lWrist.x - rWrist.x) > 0.35) targetPoseMet = true;
+          } else if (currentTarget === 'tortoise') {
+            if (lWrist.y > lShoulder.y && rWrist.y > rShoulder.y && Math.abs(lWrist.x - rWrist.x) < 0.25) targetPoseMet = true;
+          } else if (currentTarget === 'whale') {
+            if (lWrist.x > lShoulder.x + 0.15 && rWrist.x < rShoulder.x - 0.15) targetPoseMet = true;
+          } else if (currentTarget === 'gorilla') {
+            if (lWrist.y < lShoulder.y && rWrist.y < rShoulder.y && Math.abs(lWrist.x - rWrist.x) > 0.2) targetPoseMet = true;
+          } else if (currentTarget === 'rabbit') {
+            if (Math.abs(lWrist.y - nose.y) < 0.25 && Math.abs(rWrist.y - nose.y) < 0.25) targetPoseMet = true;
+          } else if (currentTarget === 'lion') {
+            if (lWrist.y < nose.y && rWrist.y < nose.y && Math.abs(lWrist.x - rWrist.x) > 0.25) targetPoseMet = true;
+          }
+
+          if (targetPoseMet) {
+            holdTimer++;
+            document.getElementById('holdProgress').style.width = Math.min(100, (holdTimer / requiredHoldTime) * 100) + '%';
+
+            if (holdTimer >= requiredHoldTime) {
+              isPoseUnlocked = true;
+              triggerFeedbackOverlay(true, 'POSE MATCHED!');
+              playChimeSound();
+              setTimeout(showPopUpModal, 600);
+            }
+          } else {
+            if (holdTimer > 0) holdTimer--;
+            document.getElementById('holdProgress').style.width = (holdTimer / requiredHoldTime) * 100 + '%';
+          }
+        }
+      }
+      canvasCtx.restore();
+    }
+
+    function showPopUpModal() {
+      const item = POSE_ANIMALS[currentStep];
+      document.getElementById('modalEmoji').innerText = item.emoji;
+      document.getElementById('modalTitle').innerText = item.name + " Unlocked!";
+      document.getElementById('modalTrait').innerText = "Trait: " + item.trait.toUpperCase();
+      document.getElementById('modalSentence').innerText = '"' + item.sentence + '"';
+      
+      if (currentStep === POSE_ANIMALS.length - 1) {
+        document.getElementById('modalNextBtn').innerText = "Congrats! Next Section ➔";
+      } else {
+        document.getElementById('modalNextBtn').innerText = "Next Animal Challenge ➔";
+      }
+
+      document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function nextAnimal() {
+      document.getElementById('infoModal').classList.add('hidden');
+      poseScore++;
+      document.getElementById('pose-score').innerText = poseScore;
+      
+      if (currentStep < POSE_ANIMALS.length - 1) {
+        currentStep++;
+        holdTimer = 0;
+        isPoseUnlocked = false;
+        document.getElementById('holdProgress').style.width = '0%';
+        updateChallengeUI();
+        startCountdown();
+      } else {
+        switchTab('tab-comparative');
+      }
+    }
+
+    function skipAnimal() {
+      if (currentStep < POSE_ANIMALS.length - 1) {
+        currentStep++;
+        holdTimer = 0;
+        isPoseUnlocked = false;
+        document.getElementById('holdProgress').style.width = '0%';
+        updateChallengeUI();
+        startCountdown();
+      } else {
+        switchTab('tab-comparative');
+      }
+    }
+
+    // SECTION 2 LOGIC
+    function initComparativeDropdowns() {
+      const selectA = document.getElementById('comp-select-a');
+      const selectB = document.getElementById('comp-select-b');
+      selectA.innerHTML = '';
+      selectB.innerHTML = '';
+
+      DUAL_ANIMALS.forEach((a, i) => {
+        selectA.innerHTML += `<option value="${i}">${a.emoji} ${a.name}</option>`;
+        selectB.innerHTML += `<option value="${i}" ${i === 3 ? 'selected' : ''}>${a.emoji} ${a.name}</option>`;
+      });
+      updateComparative();
+    }
+
+    function updateComparative() {
+      const idxA = document.getElementById('comp-select-a').value;
+      const idxB = document.getElementById('comp-select-b').value;
+      const a = DUAL_ANIMALS[idxA];
+      const b = DUAL_ANIMALS[idxB];
+
+      document.getElementById('card-a-emoji').innerText = a.emoji;
+      document.getElementById('card-a-name').innerText = a.name;
+      document.getElementById('card-a-badge').innerText = a.trait.toUpperCase();
+
+      document.getElementById('card-b-emoji').innerText = b.emoji;
+      document.getElementById('card-b-name').innerText = b.name;
+      document.getElementById('card-b-badge').innerText = b.trait.toUpperCase();
+
+      const resultBox = document.getElementById('comp-result-sentence');
+
+      if (a.id === b.id) {
+        resultBox.innerText = '"Both are the same animal!"';
+        return;
+      }
+
+      if (b.id === 'whale' && a.id !== 'whale') {
+        resultBox.innerText = `"A ${a.name.toLowerCase()} is smaller than a whale."`;
+        return;
+      }
+      if (a.id === 'whale' && b.id !== 'whale') {
+        resultBox.innerText = `"A whale is heavier than a ${b.name.toLowerCase()}."`;
+        return;
+      }
+
+      let articleA = (a.name === 'Elephant') ? 'An' : 'A';
+      resultBox.innerText = `"${articleA} ${a.name.toLowerCase()} is ${a.comparative} than a ${b.name.toLowerCase()}."`;
+    }
+
+    function speakCompSentence() {
+      const sentence = document.getElementById('comp-result-sentence').innerText.replace(/"/g, '');
+      speakText(sentence);
+    }
+
+    // SECTION 3 LOGIC
+    function updateSpeakingQuestion() {
+      const q = SPEAKING_QUESTIONS[currentQuestionIdx];
+      failedAttempts = 0;
+
+      document.getElementById('speaking-q-num').innerText = `Question ${currentQuestionIdx + 1} of ${SPEAKING_QUESTIONS.length}`;
+      document.getElementById('spk-prompt-pair').innerText = `${capitalize(q.animal1)} & ${capitalize(q.animal2)}`;
+      document.getElementById('spk-prompt-adj').innerText = q.adjective;
+
+      document.getElementById('scaffold-box').classList.add('hidden');
+      document.getElementById('scaffold-sentence').innerText = `"${q.scaffold}"`;
+      
+      document.getElementById('attempt-count').innerText = "0";
+      document.getElementById('transcript-box').innerText = '"Waiting for microphone input..."';
+      document.getElementById('mic-status').innerText = "Click mic to start speaking...";
+      document.getElementById('mic-status').style.color = "#facc15";
+
+      resetMicUI();
+    }
+
+    function resetMicUI() {
+      const btn = document.getElementById('mic-btn');
+      btn.classList.remove('listening');
+      document.getElementById('mic-btn-text').innerText = '🎤 Press & Speak';
+      document.getElementById('soundwave').classList.remove('active');
+    }
+
+    function nextQuestion() {
+      if (currentQuestionIdx < SPEAKING_QUESTIONS.length - 1) {
+        currentQuestionIdx++;
+        updateSpeakingQuestion();
+      } else {
+        document.getElementById('mic-status').innerText = `🏆 Challenge Completed! Final Score: ${speakingScore}/${SPEAKING_QUESTIONS.length}`;
+      }
+    }
+
+    function prevQuestion() {
+      if (currentQuestionIdx > 0) {
+        currentQuestionIdx--;
+        updateSpeakingQuestion();
+      }
+    }
+
+    function toggleSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        document.getElementById('mic-status').innerText = "Speech recognition is not supported on this browser. Please use Chrome.";
+        document.getElementById('mic-status').style.color = "#ef4444";
+        return;
+      }
+
+      playMicStartSound();
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+
+      recognition.onstart = function() {
+        const btn = document.getElementById('mic-btn');
+        btn.classList.add('listening');
+        document.getElementById('mic-btn-text').innerText = '🔴 LISTENING... SPEAK NOW!';
+        document.getElementById('soundwave').classList.add('active');
+
+        document.getElementById('mic-status').innerText = "🎙️ Microphone ACTIVE! Speak your full sentence.";
+        document.getElementById('mic-status').style.color = "#facc15";
+      };
+
+      recognition.onresult = function(event) {
+        resetMicUI();
+        const spoken = event.results[0][0].transcript;
+        document.getElementById('transcript-box').innerText = `"${spoken}"`;
+        
+        checkSpeakingAnswer(spoken.toLowerCase());
+      };
+
+      recognition.onspeechend = function() {
+        resetMicUI();
+        document.getElementById('mic-status').innerText = "Processing answer...";
+        try { recognition.stop(); } catch(e){}
+      };
+
+      recognition.onerror = function(event) {
+        resetMicUI();
+        playWrongBeep();
+        triggerFeedbackOverlay(false, 'TRY AGAIN!');
+        document.getElementById('mic-status').innerText = "Error: " + event.error + ". Click mic to try again.";
+        document.getElementById('mic-status').style.color = "#ef4444";
+      };
+
+      try {
+        recognition.start();
+      } catch(e) {
+        recognition.stop();
+        setTimeout(() => recognition.start(), 200);
+      }
+    }
+
+    function checkSpeakingAnswer(spokenText) {
+      const q = SPEAKING_QUESTIONS[currentQuestionIdx];
+      const text = spokenText.toLowerCase();
+
+      const posAnimal1 = text.indexOf(q.animal1);
+      const posAnimal2 = text.indexOf(q.animal2);
+      const posComparative = text.indexOf(q.comparative);
+      const posThan = text.indexOf("than");
+
+      const hasAllWords = (posAnimal1 !== -1) && (posAnimal2 !== -1) && (posComparative !== -1) && (posThan !== -1);
+      const isGrammaticallyCorrect = (posAnimal1 < posComparative) && (posComparative < posThan) && (posThan < posAnimal2);
+
+      if (hasAllWords && isGrammaticallyCorrect) {
+        triggerFeedbackOverlay(true, 'EXCELLENT!');
+        playChimeSound();
+        speakingScore++;
+        document.getElementById('speaking-score').innerText = speakingScore;
+        document.getElementById('mic-status').innerText = "🎉 PERFECT! Great comparison sentence!";
+        document.getElementById('mic-status').style.color = "#70E000";
+      } else {
+        triggerFeedbackOverlay(false, 'TRY AGAIN!');
+        playWrongBeep();
+        failedAttempts++;
+        document.getElementById('attempt-count').innerText = failedAttempts;
+        document.getElementById('mic-status').innerText = `❌ Not quite! Check your sentence order.`;
+        document.getElementById('mic-status').style.color = "#ef4444";
+
+        if (failedAttempts >= 2) {
+          playHintPopSound();
+          document.getElementById('scaffold-box').classList.remove('hidden');
+          document.getElementById('mic-status').innerText = "💡 Missing word scaffold hint unlocked!";
+        }
+      }
+    }
+
+    window.onload = () => {
+      initComparativeDropdowns();
+      updateSpeakingQuestion();
+    };
+  </script>
+</body>
+</html>
